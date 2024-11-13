@@ -1,25 +1,52 @@
 <?php
-include '../db.php'; // Pastikan db.php di-include
+include '../db.php'; // sesuaikan path ini jika file db.php berada di lokasi berbeda
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $judul_buku = $_POST['judul_buku'];
     $penulis = $_POST['penulis'];
+    $penerbit = $_POST['penerbit'];
     $prodi = $_POST['prodi'];
-    $tahun_terbit = $_POST['tahun_terbit'];
     $deskripsi = $_POST['deskripsi'];
-    $jumlah_halaman = $_POST['jumlah_halaman'];
     $tag = $_POST['tag'];
+    $status = $_POST['status'];
 
-    // Query untuk memasukkan data buku baru
-    $sql = "INSERT INTO data_buku (judul_buku, penulis, prodi, tahun_terbit, deskripsi, jumlah_halaman, tag) 
-            VALUES ('$judul_buku', '$penulis', '$prodi', '$tahun_terbit', '$deskripsi', '$jumlah_halaman', '$tag')";
+    // Mengelola file gambar yang diunggah
+    if (isset($_FILES['gambar'])) {
+        $gambar = $_FILES['gambar']['name'];
+        $targetDir = "uploads/";
+        
+        // Membuat folder 'uploads' jika belum ada
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0777, true);
+        }
 
-    if (mysqli_query($conn, $sql)) {
-        echo "Buku berhasil ditambahkan!";
+        $targetFile = $targetDir . basename($gambar);
+
+        // Pindahkan file yang diunggah ke folder server
+        if (move_uploaded_file($_FILES['gambar']['tmp_name'], $targetFile)) {
+            // Simpan data buku ke database beserta path gambar
+            $sql = "INSERT INTO buku (judul_buku, penulis, penerbit, prodi, deskripsi, tag, status, gambar) 
+                    VALUES (:judul_buku, :penulis, :penerbit, :prodi, :deskripsi, :tag, :status, :gambar)";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([
+                ':judul_buku' => $judul_buku,
+                ':penulis' => $penulis,
+                ':penerbit' => $penerbit,
+                ':prodi' => $prodi,
+                ':deskripsi' => $deskripsi,
+                ':tag' => $tag,
+                ':status' => $status,
+                ':gambar' => $targetFile,
+            ]);
+
+            echo json_encode(["message" => "Buku berhasil ditambahkan."]);
+        } else {
+            echo json_encode(["message" => "Gagal mengunggah gambar."]);
+        }
     } else {
-        echo "Error: " . $sql . "<br>" . mysqli_error($conn);
+        echo json_encode(["message" => "Gambar tidak ditemukan."]);
     }
-
-    mysqli_close($conn);
+} else {
+    echo json_encode(["message" => "Invalid request"]);
 }
 ?>

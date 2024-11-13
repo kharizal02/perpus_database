@@ -11,13 +11,33 @@ $email = $_POST['email'];
 $password = $_POST['password'];
 
 try {
-    // Cek apakah email ada di tabel users
-    $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
-    $stmt->bindParam(':email', $email);
-    $stmt->execute();
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Cek apakah email ada di tabel admin (tanpa password hashing)
+    $stmtAdmin = $conn->prepare("SELECT * FROM admin WHERE email = :email AND password = :password");
+    $stmtAdmin->bindParam(':email', $email);
+    $stmtAdmin->bindParam(':password', $password); // Tanpa password_verify
+    $stmtAdmin->execute();
+    $admin = $stmtAdmin->fetch(PDO::FETCH_ASSOC);
 
-    // Cek apakah data user ditemukan dan password cocok
+    // Jika ditemukan di tabel admin, login berhasil sebagai admin
+    if ($admin) {
+        echo json_encode([
+            "success" => true,
+            "message" => "Login berhasil sebagai Admin!",
+            "data" => [
+                "email" => $admin['email'],
+                "role" => 'admin'
+            ]
+        ]);
+        exit;
+    }
+
+    // Cek apakah email ada di tabel users
+    $stmtUser = $conn->prepare("SELECT * FROM users WHERE email = :email");
+    $stmtUser->bindParam(':email', $email);
+    $stmtUser->execute();
+    $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
+
+    // Jika ditemukan di tabel user dan password cocok (dengan hashing)
     if ($user && password_verify($password, $user['password'])) {
         // Ambil data mahasiswa berdasarkan NRP
         $nrp = $user['nrp'];
@@ -26,25 +46,29 @@ try {
         $stmt->execute();
         $mahasiswa = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Cek apakah data mahasiswa ditemukan
+        // Jika data mahasiswa ditemukan
         if ($mahasiswa) {
             echo json_encode([
                 "success" => true,
-                "message" => "Login berhasil!",
+                "message" => "Login berhasil sebagai User!",
                 "data" => [
+                    "email" => $user['email'],
                     "nrp" => $nrp,
                     "nama" => $mahasiswa['nama'],
-                    "prodi" => $mahasiswa['prodi']
+                    "prodi" => $mahasiswa['prodi'],
+                    "role" => 'user'
                 ]
             ]);
+            exit;
         } else {
             // Jika data mahasiswa tidak ditemukan
             echo json_encode(["success" => false, "message" => "Data mahasiswa tidak ditemukan"]);
         }
-    } else {
-        // Jika email atau password salah
-        echo json_encode(["success" => false, "message" => "Email atau password salah"]);
     }
+
+    // Jika email tidak ditemukan di kedua tabel
+    echo json_encode(["success" => false, "message" => "Email atau password salah"]);
+
 } catch (PDOException $e) {
     // Tangani error jika terjadi masalah pada query atau koneksi database
     echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);

@@ -1,52 +1,67 @@
 <?php
-include '../db.php'; // sesuaikan path ini jika file db.php berada di lokasi berbeda
+include '../db.php'; // File untuk koneksi database
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $judul_buku = $_POST['judul_buku'];
-    $penulis = $_POST['penulis'];
-    $penerbit = $_POST['penerbit'];
-    $prodi = $_POST['prodi'];
-    $deskripsi = $_POST['deskripsi'];
-    $tag = $_POST['tag'];
-    $status = $_POST['status'];
+// Memeriksa apakah request menggunakan metode POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Mendapatkan data JSON dari request body
+    $input = json_decode(file_get_contents("php://input"), true);
 
-    // Mengelola file gambar yang diunggah
-    if (isset($_FILES['gambar'])) {
-        $gambar = $_FILES['gambar']['name'];
-        $targetDir = "uploads/";
+    // Validasi data
+    if (
+        isset($input['judul_buku'], $input['penulis'], $input['prodi'], $input['tahun_terbit'], 
+              $input['deskripsi'], $input['jumlah_halaman'], $input['tag'], $input['status'])
+    ) {
+        $judul_buku = $input['judul_buku'];
+        $penulis = $input['penulis'];
+        $prodi = $input['prodi'];
+        $tahun_terbit = $input['tahun_terbit'];
+        $deskripsi = $input['deskripsi'];
+        $jumlah_halaman = $input['jumlah_halaman'];
+        $tag = $input['tag'];
+        $status = $input['status'];
+
+        // Query untuk memeriksa apakah buku dengan judul yang sama sudah ada
+        $checkQuery = "SELECT * FROM buku WHERE judul_buku = :judul_buku";
         
-        // Membuat folder 'uploads' jika belum ada
-        if (!is_dir($targetDir)) {
-            mkdir($targetDir, 0777, true);
-        }
+        // Menggunakan PDO untuk prepared statement
+        $stmt = $conn->prepare($checkQuery);
+        $stmt->bindValue(':judul_buku', $judul_buku, PDO::PARAM_STR);
+        $stmt->execute();
 
-        $targetFile = $targetDir . basename($gambar);
-
-        // Pindahkan file yang diunggah ke folder server
-        if (move_uploaded_file($_FILES['gambar']['tmp_name'], $targetFile)) {
-            // Simpan data buku ke database beserta path gambar
-            $sql = "INSERT INTO buku (judul_buku, penulis, penerbit, prodi, deskripsi, tag, status, gambar) 
-                    VALUES (:judul_buku, :penulis, :penerbit, :prodi, :deskripsi, :tag, :status, :gambar)";
-            $stmt = $conn->prepare($sql);
-            $stmt->execute([
-                ':judul_buku' => $judul_buku,
-                ':penulis' => $penulis,
-                ':penerbit' => $penerbit,
-                ':prodi' => $prodi,
-                ':deskripsi' => $deskripsi,
-                ':tag' => $tag,
-                ':status' => $status,
-                ':gambar' => $targetFile,
-            ]);
-
-            echo json_encode(["message" => "Buku berhasil ditambahkan."]);
+        if ($stmt->rowCount() > 0) {
+            // Buku dengan judul yang sama sudah ada
+            echo json_encode(['success' => false, 'message' => 'Buku dengan judul ini sudah ada']);
         } else {
-            echo json_encode(["message" => "Gagal mengunggah gambar."]);
+            // Query untuk memasukkan data ke tabel buku
+            $query = "INSERT INTO buku (judul_buku, penulis, prodi, tahun_terbit, deskripsi, jumlah_halaman, tag, status) 
+                      VALUES (:judul_buku, :penulis, :prodi, :tahun_terbit, :deskripsi, :jumlah_halaman, :tag, :status)";
+
+            // Menggunakan PDO untuk prepared statement
+            $stmt = $conn->prepare($query);
+
+            // Mengikat nilai parameter
+            $stmt->bindValue(':judul_buku', $judul_buku, PDO::PARAM_STR);
+            $stmt->bindValue(':penulis', $penulis, PDO::PARAM_STR);
+            $stmt->bindValue(':prodi', $prodi, PDO::PARAM_STR);
+            $stmt->bindValue(':tahun_terbit', $tahun_terbit, PDO::PARAM_INT);
+            $stmt->bindValue(':deskripsi', $deskripsi, PDO::PARAM_STR);
+            $stmt->bindValue(':jumlah_halaman', $jumlah_halaman, PDO::PARAM_INT);
+            $stmt->bindValue(':tag', $tag, PDO::PARAM_STR);
+            $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+
+            // Menjalankan query
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Buku berhasil ditambahkan']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Gagal menambahkan buku']);
+            }
         }
     } else {
-        echo json_encode(["message" => "Gambar tidak ditemukan."]);
+        echo json_encode(['success' => false, 'message' => 'Data tidak lengkap']);
     }
 } else {
-    echo json_encode(["message" => "Invalid request"]);
+    echo json_encode(['success' => false, 'message' => 'Metode tidak valid']);
 }
+
+$conn = null; // Menutup koneksi
 ?>

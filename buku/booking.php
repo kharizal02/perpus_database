@@ -20,15 +20,12 @@ if (isset($_POST['nrp']) && isset($_POST['nama']) && isset($_POST['judul_buku'])
     $checkStmt->execute();
 
     if ($checkStmt->rowCount() > 0) {
-    
         echo json_encode(array("status" => "error", "message" => "Maaf, buku ini sudah terpinjam"));
     } else {
-     
         $sql = "INSERT INTO booking (nrp, nama, judul_buku, tanggal_booking, tanggal_pengembalian) 
                 VALUES (:nrp, :nama, :judul_buku, :tanggal_booking, :tanggal_pengembalian)";
         $stmt = $conn->prepare($sql);
 
-   
         $stmt->bindValue(':nrp', $nrp, PDO::PARAM_STR);
         $stmt->bindValue(':nama', $nama, PDO::PARAM_STR);
         $stmt->bindValue(':judul_buku', $judul_buku, PDO::PARAM_STR);
@@ -36,7 +33,17 @@ if (isset($_POST['nrp']) && isset($_POST['nama']) && isset($_POST['judul_buku'])
         $stmt->bindValue(':tanggal_pengembalian', $tanggal_pengembalian, PDO::PARAM_STR);
 
         if ($stmt->execute()) {
-            echo json_encode(array("status" => "success", "message" => "Booking Sukses"));
+            $updateStatusQuery = "UPDATE buku SET status = 'Dipinjam' WHERE judul_buku = :judul_buku";
+            $updateStmt = $conn->prepare($updateStatusQuery);
+            $updateStmt->bindValue(':judul_buku', $judul_buku, PDO::PARAM_STR);
+
+            if ($updateStmt->execute()) {
+                echo json_encode(array("status" => "success", "message" => "Booking Sukses"));
+            } else {
+                echo json_encode(array("status" => "error", "message" => "Gagal memperbarui status buku"));
+            }
+
+            $updateStmt = null;
         } else {
             echo json_encode(array("status" => "error", "message" => "Booking gagal: " . $stmt->errorInfo()[2]));
         }

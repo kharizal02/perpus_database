@@ -7,7 +7,7 @@ if (empty($id_buku)) {
     exit;
 }
 
-$sql = "SELECT judul_buku, penulis, prodi, tahun_terbit, deskripsi, jumlah_halaman, tag, status 
+$sql = "SELECT id_buku, judul_buku, penulis, prodi, tahun_terbit, deskripsi, jumlah_halaman, tag, status 
         FROM buku WHERE id_buku = :id_buku";
 
 $stmt = $conn->prepare($sql);

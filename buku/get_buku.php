@@ -2,7 +2,7 @@
 include '../db.php'; 
 $query = isset($_GET['query']) ? $_GET['query'] : '';
 
-$sql = "SELECT id_buku, judul_buku, penulis, tahun_terbit, status, tag, gambar FROM buku";
+$sql = "SELECT id_buku, judul_buku, penulis, tahun_terbit, status, tag FROM buku";
 
 if (!empty($query)) {
     $sql .= " WHERE tag LIKE :query OR judul_buku LIKE :query";

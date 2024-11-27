@@ -19,13 +19,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($result) {
+            // Sebelum menghapus, update status booking menjadi '1' (perpanjangan sudah dilakukan)
+            $updateQuery = "UPDATE booking SET perpanjangan_status = '1' WHERE id_booking = :id_booking";
+            $stmt = $conn->prepare($updateQuery);
+            $stmt->bindParam(':id_booking', $id_booking);
+            $stmt->execute();
+
             // Hapus data perpanjangan berdasarkan ID booking
             $deletePerpanjangan = "DELETE FROM perpanjangan WHERE id_booking = :id_booking";
             $stmt = $conn->prepare($deletePerpanjangan);
             $stmt->execute([':id_booking' => $id_booking]);
 
             if ($stmt->rowCount()) {
-                echo json_encode(['status' => 'success', 'message' => 'Perpanjangan berhasil dihapus.']);
+                echo json_encode(['status' => 'success', 'message' => 'Perpanjangan berhasil dihapus dan status diperbarui.']);
             } else {
                 echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus perpanjangan.']);
             }

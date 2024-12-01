@@ -10,6 +10,7 @@ $email = $_POST['email'];
 $password = $_POST['password'];
 
 try {
+    // Cek login sebagai admin
     $stmtAdmin = $conn->prepare("SELECT * FROM admin WHERE email = :email AND password = :password");
     $stmtAdmin->bindParam(':email', $email, PDO::PARAM_STR);
     $stmtAdmin->bindParam(':password', $password, PDO::PARAM_STR); 
@@ -28,6 +29,7 @@ try {
         exit;
     }
 
+    // Cek login sebagai user
     $stmtUser = $conn->prepare("SELECT * FROM users WHERE email = :email");
     $stmtUser->bindParam(':email', $email, PDO::PARAM_STR);
     $stmtUser->execute();
@@ -42,6 +44,15 @@ try {
         $mahasiswa = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($mahasiswa) {
+            // Cek status mahasiswa
+            if ($mahasiswa['status'] === 'Tidak Aktif') {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Maaf, Anda Sudah Tidak Terdaftar Di Kampus Ini."
+                ]);
+                exit;
+            }
+
             echo json_encode([
                 "success" => true,
                 "message" => "Login berhasil sebagai User!",
@@ -58,7 +69,6 @@ try {
             echo json_encode(["success" => false, "message" => "Data mahasiswa tidak ditemukan"]);
         }
     } else {
-
         echo json_encode(["success" => false, "message" => "Email atau password salah"]);
     }
 

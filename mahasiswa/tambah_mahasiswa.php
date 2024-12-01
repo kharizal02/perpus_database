@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 include '../db.php';
 header('Content-Type: application/json');
 
+// Pastikan semua parameter ada
 if (isset($_POST['nama'], $_POST['nrp'], $_POST['status'], $_POST['prodi'], $_POST['semester'], $_POST['tgl_lahir'])) {
     $nama = $_POST['nama'];
     $nrp = $_POST['nrp'];
@@ -13,6 +14,7 @@ if (isset($_POST['nama'], $_POST['nrp'], $_POST['status'], $_POST['prodi'], $_PO
     $semester = $_POST['semester'];
     $tgl_lahir = $_POST['tgl_lahir'];
 
+    // Cek apakah ada input kosong
     if (empty($nama) || empty($nrp) || empty($status) || empty($prodi) || empty($semester) || empty($tgl_lahir)) {
         echo json_encode(["status" => "error", "message" => "Semua parameter harus diisi."]);
         exit;
@@ -33,7 +35,8 @@ if (isset($_POST['nama'], $_POST['nrp'], $_POST['status'], $_POST['prodi'], $_PO
 
         // Mulai transaksi
         $conn->beginTransaction();
-        // Tambahkan data mahasiswa
+        
+        // Tambahkan data mahasiswa tanpa perlu mengirimkan tgl_tambah
         $insertQuery = "INSERT INTO data_mahasiswa (nama, nrp, status, prodi, semester, tgl_lahir) 
                         VALUES (:nama, :nrp, :status, :prodi, :semester, :tgl_lahir)";
         $insertStmt = $conn->prepare($insertQuery);
@@ -45,9 +48,12 @@ if (isset($_POST['nama'], $_POST['nrp'], $_POST['status'], $_POST['prodi'], $_PO
         $insertStmt->bindValue(':tgl_lahir', $tgl_lahir, PDO::PARAM_STR);
         $insertStmt->execute();
 
+        // Commit transaksi
         $conn->commit();
+        
         echo json_encode(["status" => "success", "message" => "Mahasiswa berhasil ditambahkan."]);
     } catch (Exception $e) {
+        // Rollback jika terjadi error
         $conn->rollBack();
         echo json_encode(["status" => "error", "message" => "Terjadi kesalahan: " . $e->getMessage()]);
     }

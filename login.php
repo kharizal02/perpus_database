@@ -23,7 +23,8 @@ try {
             "message" => "Login berhasil sebagai Admin!",
             "data" => [
                 "email" => $admin['email'],
-                "role" => 'admin'
+                "role" => 'admin',
+                "notifikasi" => [] // Kosong karena admin tidak memiliki notifikasi
             ]
         ]);
         exit;
@@ -38,13 +39,13 @@ try {
     if ($user && password_verify($password, $user['password'])) {
         $id_mahasiswa = (int)$user['id_mahasiswa'];
 
+        // Ambil data mahasiswa
         $stmt = $conn->prepare("SELECT * FROM data_mahasiswa WHERE id_mahasiswa = :id_mahasiswa");
         $stmt->bindParam(':id_mahasiswa', $id_mahasiswa, PDO::PARAM_INT);
         $stmt->execute();
         $mahasiswa = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($mahasiswa) {
-            // Cek status mahasiswa
             if ($mahasiswa['status'] === 'Tidak Aktif') {
                 echo json_encode([
                     "success" => false,
@@ -52,6 +53,14 @@ try {
                 ]);
                 exit;
             }
+
+            // Ambil notifikasi untuk mahasiswa
+            $query = "SELECT id_notifikasi, pesan
+                      FROM notifikasi 
+                      WHERE id_mahasiswa = :id_mahasiswa";
+            $stmtNotif = $conn->prepare($query);
+            $stmtNotif->execute([':id_mahasiswa' => $id_mahasiswa]);
+            $notifikasi = $stmtNotif->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode([
                 "success" => true,
@@ -61,7 +70,8 @@ try {
                     "nama" => $mahasiswa['nama'],
                     "nrp" => (string)$mahasiswa['nrp'],
                     "prodi" => $mahasiswa['prodi'],
-                    "role" => 'user'
+                    "role" => 'user',
+                    "notifikasi" => $notifikasi // Notifikasi dengan status unread
                 ]
             ]);
             exit;
